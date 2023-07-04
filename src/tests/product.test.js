@@ -1,9 +1,9 @@
 const request = require("supertest")
 const app = require("../app");
-require("../models/index")                      //! Importante
+require("../models/index") 
 const Category = require("../models/Category");
-
-const ProductImg = require("../models/ProductImg"); //! para setImages
+const ProductImg = require("../models/ProductImg"); 
+// --------------------------------------------------------
 const BASE_URL_PRODUCT_IMAGES = '/api/v1/product_images'; //! para setImages
 
 const BASE_URL_USERS = '/api/v1/users/login'
@@ -11,6 +11,7 @@ const BASE_URL_PRODUCTS = '/api/v1/products'
 let TOKEN;
 let category;   // Esto NO lo destruire inmediatamente en el 1er POST
 let productId;
+let productImg;
 
 beforeAll(async () => {
     const user = {
@@ -58,7 +59,8 @@ test("GET -> 'BASE_URL_PRODUCTS', should return status code 200 & res.body.lengt
 
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
-    expect(res.body[0]).toBeDefined()
+    expect(res.body[0].category).toBeDefined()
+    expect(res.body[0].productImgs).toBeDefined()
 })
 
 //! Filtro de "product" con alguna "categoria"
@@ -69,7 +71,8 @@ test("GET -> 'BASE_URL_PRODUCTS?category = category.id', should return status co
 
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
-    expect(res.body[0]).toBeDefined()
+    expect(res.body[0].category).toBeDefined()
+    expect(res.body[0].productImgs).toBeDefined()
 })
 
 //!
@@ -79,6 +82,9 @@ test("GET ONE -> 'BASE_URL_PRODUCTS/:id', should return status code 200 & res.bo
 
     expect(res.status).toBe(200)
     expect(res.body.title).toBe("xiaomi 12")    // Esto es copy/paste de lo que puse en POST
+    expect(res.body.category).toBeDefined()
+    expect(res.body.productImgs).toBeDefined()
+
 })
 
 //!
@@ -97,41 +103,24 @@ test("PUT -> 'BASE_URL_PRODUCTS/:id', should return status code 200 & res.body.l
     expect(res.body.title).toBe(product.title)
 })
 
-// //! POST /products/:id/images (privado)
-test("POST -> 'BASE_URL_PRODUCTS/:id/images', should return status code 200 & res.body.message === Success ", async () => {
-    // POST -> 'BASE_URL_PRODUCT_IMAGES', should return status code 201 & res.body.url -> to be defined
-    const path = require('path');
-    const RelativePath = ['..', 'public', 'images_to_upload'];
-    const imageTest = 'monitor_2.jpg';
-    const imagePath = path.join(__dirname, ...RelativePath, imageTest);
+//!
+test("POST -> 'BASE_URL_PRODUCTS/:id/images', should return status code 200 & res,body length === 1", async() => {
 
-    let res = await request(app)
-        .post(BASE_URL_PRODUCT_IMAGES)
-        .attach('image', imagePath)
-        .set("Authorization", `Bearer ${TOKEN}`)
-    productImgId = res.body.id  //Borrare la imagen al final del test()
-    //console.log(res.body)
+    const productImgBody = {
+        url: "http://localhost:8080/api/v1/public/uploads/cocina.jpg",
+        filename: "cocina.jpg",
+        productId: productId
+    }
 
-    expect(res.status).toBe(201)
-    expect(res.body.url).toBeDefined()
+    productImg = await ProductImg.create(productImgBody)  //!
 
-    // POST -> 'BASE_URL_PRODUCTS/:id/images', should return status code 200 & res.body.message === Success
-    res = await request(app)
+    const res = await request(app)
         .post(`${BASE_URL_PRODUCTS}/${productId}/images`)
-        .send([productImgId])
+        .send([productImg.id])
         .set("Authorization", `Bearer ${TOKEN}`)
-    //console.log(res.body)
 
     expect(res.status).toBe(200)
-    expect(res.body.message).toBe("Success")
-
-    // DELETE -> 'BASE_URL_PRODUCT_IMAGES/:id', should return status code 204
-    res = await request(app)
-        .delete(`${BASE_URL_PRODUCT_IMAGES}/${productImgId}`)
-        .set("Authorization", `Bearer ${TOKEN}`)
-    //console.log(res.body)
-
-    expect(res.status).toBe(204)
+    expect(res.body).toHaveLength(1)
 })
 
 //! DELETE
@@ -143,4 +132,5 @@ test("DELETE -> 'BASE_URL_PRODUCTS/:id', should return status code 204", async (
     expect(res.status).toBe(204)
 
     await category.destroy()    // "category" removido, para no tener residuos en otros test
+    await productImg.destroy()  
 })

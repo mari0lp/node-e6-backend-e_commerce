@@ -1,11 +1,18 @@
 const catchError = require('../utils/catchError');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
+const Category = require('../models/Category');
+const ProductImg = require('../models/ProductImg');
 
 const getAll = catchError(async(req, res) => {
     const user = req.user                       //! viene del verifyJWT
     const results = await Cart.findAll({
-        include: [Product],
+        include: [
+            {
+                model: Product,
+                include:[Category, ProductImg]
+            }
+        ],
         where: {userId: user.id}
     });
     return res.json(results);

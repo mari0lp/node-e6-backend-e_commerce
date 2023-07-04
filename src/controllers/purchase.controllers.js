@@ -2,32 +2,37 @@ const catchError = require('../utils/catchError');
 const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
+const Category = require('../models/Category');
+const ProductImg = require('../models/ProductImg');
 
-const getAll = catchError(async(req, res) => {
-    const userId = req.user.id                  //!
+const getAll = catchError(async (req, res) => {
+    const userId = req.user.id                      //!
     const results = await Purchase.findAll({
-    
-        where: {userId: userId},    //!
-        include: [Product]          //!
-
+        where: { userId: userId },                  //!
+        include: [
+            {
+                model: Product,
+                include: [Category, ProductImg]
+            }
+        ]                                           //!
     });
 
     return res.json(results);
 });
 
-const create = catchError(async(req, res) => {
+const create = catchError(async (req, res) => {
     const userId = req.user.id                                          //!
 
     const cart = await Cart.findAll({   // cart is array                //!
-        where: {userId},
-        attributes:["userId","productId", "quantity"],                  //!
+        where: { userId },
+        attributes: ["userId", "productId", "quantity"],                  //!
         raw: true   // trae los registros, sin metodos especiales       //!
     })
 
 
     const result = await Purchase.bulkCreate(cart); //registro en array //!
 
-    await Cart.destroy({where: {userId}})                               //!
+    await Cart.destroy({ where: { userId } })                               //!
 
     return res.status(201).json(result);
 });
